@@ -5,6 +5,7 @@ import com.backempresa.persona.domain.Persona;
 import com.backempresa.reserva.application.ReservaService;
 import com.backempresa.shared.NotFoundException;
 import com.backempresa.shared.UnprocesableException;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,14 @@ public class ReservaControlador {
         return new ResponseEntity<>(getJWTToken(usuario,"ROLE_USER"), HttpStatus.OK);
     }
 
+    @GetMapping("token/{token}")
+    public ResponseEntity<Void> checkToken(@PathVariable String token){
+        if (this.verifyToken(token))
+            return new ResponseEntity<>(HttpStatus.OK);
+        else
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
     @GetMapping("usuarios")
     public ResponseEntity<List<Persona>> findAllUsers(){
         return new ResponseEntity<>(personaService.findAll(), HttpStatus.OK);
@@ -63,5 +72,17 @@ public class ReservaControlador {
                 .signWith(SignatureAlgorithm.HS512,
                         secretKey.getBytes()).compact();
         return "Bearer " + token;
+    }
+
+    private boolean verifyToken(String token){
+        final String SECRET = "mySecretKey";
+        final String PREFIX = "Bearer ";
+        try {
+            String jwtToken = token.replace(PREFIX,"");
+            Claims claims = Jwts.parser().setSigningKey(SECRET.getBytes()).parseClaimsJws(jwtToken).getBody();
+            return true;
+        } catch(Exception e) {
+            return false;
+        }
     }
 }

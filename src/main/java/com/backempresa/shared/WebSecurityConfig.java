@@ -18,7 +18,7 @@ class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .addFilterAfter(new JWTAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class)
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeRequests()
-                .antMatchers("/api/v0/token").permitAll()
+                .antMatchers("/api/v0/token/**").permitAll()
                 //.antMatchers(HttpMethod.GET, "/api/v0/reserva").hasAnyRole("USER","ADMIN")
                 //.antMatchers(HttpMethod.POST, "/persona").hasRole("ADMIN")
                 //.antMatchers(HttpMethod.PUT, "/persona").hasRole("ADMIN")

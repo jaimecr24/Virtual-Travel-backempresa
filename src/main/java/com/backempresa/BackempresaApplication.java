@@ -1,6 +1,7 @@
 package com.backempresa;
 
 import com.backempresa.autobus.application.AutobusService;
+import com.backempresa.autobus.domain.Autobus;
 import com.backempresa.autobus.infrastructure.AutobusInputDto;
 import com.backempresa.destino.application.DestinoService;
 import com.backempresa.destino.domain.Destino;

@@ -10,15 +10,18 @@ import com.backempresa.reserva.infrastructure.ReservaInputDto;
 import com.backempresa.reserva.infrastructure.ReservaOutputDto;
 import com.backempresa.reserva.infrastructure.ReservaRepo;
 import com.backempresa.shared.NotFoundException;
+import com.backempresa.shared.NotPlaceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class ReservaServiceImpl implements ReservaService {
 
     @Autowired
@@ -80,6 +83,19 @@ public class ReservaServiceImpl implements ReservaService {
         return this.toOutputDto(rsv);
     }
 
+    @Override
+    public ReservaOutputDto add(ReservaOutputDto outputDto) throws NotFoundException, NotPlaceException {
+        // Crea objeto Reserva con los datos indicados en outputDto
+        // No quedan plazas libres, status será RECHAZADA y NO se añade a la base de datos.
+        Reserva rsv = this.toReserva(outputDto);
+        Autobus bus = rsv.getAutobus();
+        rsv.setStatus((bus.getPlazasLibres() - numReservasAceptadas(bus) > 0) ? Reserva.STATUS.CONFIRMADA : Reserva.STATUS.RECHAZADA);
+        rsv.setFechaRegistro(new Date());
+        if (rsv.getStatus() == Reserva.STATUS.RECHAZADA) throw new NotPlaceException("No queda sitio libre: reserva cancelada");
+        reservaRepo.save(rsv);
+        return this.toOutputDto(rsv);
+    }
+
     private long numReservasAceptadas(Autobus bus) {
         return bus.getReservas().stream().filter(e -> e.getStatus() == Reserva.STATUS.ACEPTADA).count();
     }
@@ -113,6 +129,24 @@ public class ReservaServiceImpl implements ReservaService {
         rsv.setTelefono(inputDto.getTelefono());
         rsv.setAutobus(myBus.get());
         // fechaReserva e idReserva se completan en el momento de añadir la reserva a la bd.
+        return rsv;
+    }
+
+    public Reserva toReserva(ReservaOutputDto outputDto) throws NotFoundException {
+        Reserva rsv = new Reserva();
+        List<Destino> ldst = destinoService.findByDestino(outputDto.getCiudadDestino());
+        if (ldst.isEmpty()) throw new NotFoundException("Destino no contrado: "+outputDto.getCiudadDestino());
+        List<Autobus> autobuses = ldst.get(0).getAutobuses();
+        Optional<Autobus> myBus =
+                autobuses.stream().filter(e ->
+                        sdf.format(e.getFecha()).equals(outputDto.getFechaReserva())
+                                && Objects.equals(e.getHoraSalida(), outputDto.getHoraReserva())).findFirst();
+        if (myBus.isEmpty()) throw new NotFoundException("No hay ningún autobús el "+outputDto.getFechaReserva()+" a las "+outputDto.getHoraReserva());
+        rsv.setNombre(outputDto.getNombre());
+        rsv.setApellido(outputDto.getApellido());
+        rsv.setEmail(outputDto.getEmail());
+        rsv.setTelefono(outputDto.getTelefono());
+        rsv.setAutobus(myBus.get());
         return rsv;
     }
 

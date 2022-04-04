@@ -10,7 +10,9 @@ import java.util.List;
 public interface ReservaService {
     List<Reserva> findAll();
     Reserva findById(long id);
+    Reserva findByIdentificador(String identificador);
     List<ReservaDisponibleOutputDto> findDisponible(String destino, String fechaInferior, String fechaSuperior, String horaInferior, String horaSuperior);
+    long getPlazasLibres(String destino, String fecha, float hora);
     ReservaOutputDto add(ReservaInputDto inputDto);
     ReservaOutputDto add(ReservaOutputDto outputDto);
     Reserva put(long id, Reserva reserva);

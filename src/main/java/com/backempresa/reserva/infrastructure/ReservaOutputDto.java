@@ -11,6 +11,7 @@ import lombok.ToString;
 @ToString
 public class ReservaOutputDto {
     private long idReserva;
+    private String identificador;
     private String ciudadDestino;
     private String nombre;
     private String apellido;

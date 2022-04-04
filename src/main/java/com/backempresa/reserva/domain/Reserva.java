@@ -17,6 +17,9 @@ public class Reserva {
     @GeneratedValue(strategy= GenerationType.IDENTITY)
     private Long idReserva;
 
+    @Column(unique = true)
+    private String identificador;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idAutobus")
     private Autobus autobus;

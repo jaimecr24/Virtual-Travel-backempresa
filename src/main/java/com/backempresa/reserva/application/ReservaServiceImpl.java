@@ -1,14 +1,10 @@
 package com.backempresa.reserva.application;
 
-import com.backempresa.autobus.application.AutobusService;
 import com.backempresa.autobus.domain.Autobus;
 import com.backempresa.destino.application.DestinoService;
 import com.backempresa.destino.domain.Destino;
 import com.backempresa.reserva.domain.Reserva;
-import com.backempresa.reserva.infrastructure.ReservaDisponibleOutputDto;
-import com.backempresa.reserva.infrastructure.ReservaInputDto;
-import com.backempresa.reserva.infrastructure.ReservaOutputDto;
-import com.backempresa.reserva.infrastructure.ReservaRepo;
+import com.backempresa.reserva.infrastructure.*;
 import com.backempresa.shared.NotFoundException;
 import com.backempresa.shared.NotPlaceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +70,52 @@ public class ReservaServiceImpl implements ReservaService {
     }
 
     @Override
+    public List<ReservaOutputDto> findReservas(String destino, String fechaInferior, String fechaSuperior, String horaInferior, String horaSuperior)
+    {
+        // Empezamos la búsqueda por el destino para reducir el número de posibilidades.
+        List<Destino> dstList = destinoService.findByDestino(destino);
+        //TODO: Si especificamos que el campo nombreDestino es único, el retorno de esta función será un único objeto, no una lista.
+        if (dstList.size()==0) return new ArrayList<>();
+        Destino dst = dstList.get(0);
+        List<Autobus> busList = dst.getAutobuses();
+        try {
+            Date fInf = sdf2.parse(fechaInferior);
+            Date fSup = (fechaSuperior != null) ? sdf2.parse(fechaSuperior) : null;
+            Float hInf = (horaInferior != null) ? Float.parseFloat(horaInferior) : 0F;
+            Float hSup = (horaSuperior != null) ? Float.parseFloat(horaSuperior) : 24F;
+            Optional<List<Reserva>> reservas = busList.stream().filter(e ->
+                            e.getFecha().compareTo(fInf) >= 0
+                                    && (fSup==null || e.getFecha().compareTo(fSup)<=0)
+                                    && e.getHoraSalida()>=hInf && e.getHoraSalida()<=hSup).map(Autobus::getReservas)
+                    .reduce((l1,l2)-> { l1.addAll(l2); return l1; });
+            return reservas.map(reservaList -> reservaList.stream().map(this::toOutputDto).collect(Collectors.toList()))
+                    .orElseGet(ArrayList::new);
+        } catch(Exception e) {
+            if (e.getClass()== ParseException.class) {
+                //TODO
+            }
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public ReservaOutputDto findReserva(CorreoInputDto correoDto) {
+        List<Destino> dstList = destinoService.findByDestino(correoDto.getCiudadDestino());
+        if (dstList.size()==0) throw new NotFoundException("Reserva no encontrada");
+        Destino dst = dstList.get(0);
+        List<Autobus> busList = dst.getAutobuses();
+        // Obtenemos la lista de reservas que van a ese destino para el día y hora indicados.
+        List<Reserva> lstRsv = busList.stream().filter(e ->
+                sdf2.format(e.getFecha()).equals(sdf2.format(correoDto.getFechaReserva()))
+                        && Objects.equals(e.getHoraSalida(), correoDto.getHoraReserva()))
+                .findFirst().map(Autobus::getReservas).orElseThrow(()->new NotFoundException("Reserva no encontrada"));
+        // Buscamos la primera que coincida con el email de correoDto
+        Optional<Reserva> optRsv = lstRsv.stream().filter(e->e.getEmail().equals(correoDto.getEmail())).findFirst();
+
+        return optRsv.map(this::toOutputDto).orElseThrow(()->new NotFoundException("Reserva no encontrada"));
+    }
+
+    @Override
     public ReservaOutputDto add(ReservaInputDto inputDto) throws NotFoundException, NotPlaceException {
         // Crea un objeto Reserva con los datos indicados en inputDto
         // Si hay sitio libre la reserva queda CONFIRMADA y añadida a la base de datos, sino se lanza excepción
@@ -111,13 +153,13 @@ public class ReservaServiceImpl implements ReservaService {
 
     @Override
     @Transactional
-    public long getPlazasLibres(String destino, String fecha, float hora) {
+    public long getPlazasLibres(String destino, Date fecha, float hora) {
         List<Destino> dstList = destinoService.findByDestino(destino);
         if (dstList.size()==0) throw new NotFoundException("Destino no encontrado");
         Destino dst = dstList.get(0);
         List<Autobus> busList = dst.getAutobuses();
         Optional<Autobus> optBus = busList.stream().filter(e
-                -> sdf.format(e.getFecha()).equals(fecha) && e.getHoraSalida()==hora).findFirst();
+                -> sdf2.format(e.getFecha()).equals(sdf2.format(fecha)) && e.getHoraSalida()==hora).findFirst();
         return optBus.map(Autobus::getPlazasLibres).orElse(0);
     }
 

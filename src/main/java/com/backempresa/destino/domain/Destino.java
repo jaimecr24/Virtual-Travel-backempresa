@@ -16,8 +16,7 @@ import java.util.List;
 public class Destino {
 
     @Id
-    @GeneratedValue(strategy= GenerationType.IDENTITY)
-    private Long idDestino;
+    private String id;
 
     private String nombreDestino;
 

@@ -10,7 +10,7 @@ import java.util.Date;
 @Setter
 @NoArgsConstructor
 public class ReservaInputDto {
-    private Long idDestino;
+    private String idDestino;
     private String nombre;
     private String apellido;
     private String telefono;

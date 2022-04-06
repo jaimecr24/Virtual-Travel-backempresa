@@ -17,8 +17,7 @@ import java.util.List;
 public class Autobus {
 
     @Id
-    @GeneratedValue(strategy= GenerationType.IDENTITY)
-    private Long idAutobus;
+    private String id; // String compuesto por: idDestino+ddMMyy+HH (longitud 11)
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idDestino")
@@ -26,7 +25,8 @@ public class Autobus {
 
     private Date fecha;
     private Float horaSalida;
-    private int plazasLibres = 40;
+    private int plazasLibres;
+    private int maxPlazas;
 
     @OneToMany(mappedBy = "autobus")
     private List<Reserva> reservas;

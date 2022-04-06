@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface AutobusRepo extends JpaRepository<Autobus,Long> {
+public interface AutobusRepo extends JpaRepository<Autobus,String> {
 }

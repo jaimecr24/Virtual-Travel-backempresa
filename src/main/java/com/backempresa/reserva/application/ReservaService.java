@@ -19,6 +19,5 @@ public interface ReservaService {
     long getPlazasLibres(String destino, Date fecha, float hora);
     ReservaOutputDto add(ReservaInputDto inputDto);
     ReservaOutputDto add(ReservaOutputDto outputDto);
-    Reserva put(long id, Reserva reserva);
     void del(long id);
 }

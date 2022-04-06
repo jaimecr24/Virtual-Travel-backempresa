@@ -24,7 +24,7 @@ public class PostOffice {
                 .from("From", "backempresa@vtravel.com")
                 .to("To", outDto.getEmail())
                 .withSubject("RESERVA "+outDto.getCiudadDestino()+" "+outDto.getStatus())
-                .withPlainText(((Objects.equals(outDto.getStatus(), "CONFIRMADA")) ? "Reserva CONFIRMADA: " : "Reserva CANCELADA")+
+                .withPlainText("Reserva "+outDto.getStatus()+
                         "\nDestino: "+outDto.getCiudadDestino()+
                         "\nFecha: "+outDto.getFechaReserva()+
                         "\nHora: "+outDto.getHoraReserva()+

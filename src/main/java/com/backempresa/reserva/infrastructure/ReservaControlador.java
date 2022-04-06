@@ -1,8 +1,11 @@
 package com.backempresa.reserva.infrastructure;
 
+import com.backempresa.autobus.application.AutobusService;
+import com.backempresa.autobus.domain.Autobus;
 import com.backempresa.persona.application.PersonaService;
 import com.backempresa.persona.domain.Persona;
 import com.backempresa.reserva.application.ReservaService;
+import com.backempresa.shared.KafkaMessageProducer;
 import com.backempresa.shared.NotFoundException;
 import com.backempresa.shared.PostOffice;
 import com.backempresa.shared.UnprocesableException;
@@ -18,15 +21,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v0")
 public class ReservaControlador {
+
+    @Autowired
+    AutobusService autobusService;
 
     @Autowired
     ReservaService reservaService;
@@ -37,7 +41,11 @@ public class ReservaControlador {
     @Autowired
     PostOffice postOffice;
 
-    private final SimpleDateFormat sdf2 = new SimpleDateFormat("ddMMyyyy");
+    @Autowired
+    KafkaMessageProducer kafkaMessageProducer;
+
+    @Autowired
+    SimpleDateFormat sdf2;
 
     // Crear token seguridad
     @PostMapping("token")
@@ -112,26 +120,27 @@ public class ReservaControlador {
     }
 
     // Endpoint para añadir directamente reservas a la bd de empresa.
+    // La petición debe contener el token Auth
     @PostMapping("reserva")
-    public ResponseEntity<ReservaOutputDto> addReserva(
-            @RequestHeader("authorize") String token,
-            @RequestBody ReservaInputDto inputDto)
+    public ResponseEntity<ReservaOutputDto> addReserva(@RequestBody ReservaInputDto inputDto)
     {
-        if (this.verifyToken(token)) {
-            return new ResponseEntity<>(reservaService.add(inputDto),HttpStatus.OK);
-        } else
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        ReservaOutputDto outputDto = reservaService.add(inputDto);
+        // Enviamos email:
+        postOffice.sendMessage(outputDto);
+        // Enviamos mensaje de kafka por reservas(0) para que la escuchen todos los backweb
+        kafkaMessageProducer.sendMessage("reservas",1, outputDto);
+        return new ResponseEntity<>(outputDto,HttpStatus.OK);
     }
 
     @GetMapping("plazas/{destino}")
-    public ResponseEntity<Long> getPlazasLibres(
+    public ResponseEntity<Integer> getPlazasLibres(
             @PathVariable String destino,
             @RequestParam(name="fecha") String fecha,
             @RequestParam(name="hora") String hora) throws ParseException {
         // Formato de fecha: ddMMyyyy
-        return new ResponseEntity<>(
-                reservaService.getPlazasLibres(destino, sdf2.parse(fecha), Float.parseFloat(hora)),
-                HttpStatus.OK);
+        String idBus = autobusService.getIdBus(destino, sdf2.parse(fecha), Float.parseFloat(hora));
+        Autobus bus = autobusService.findById(idBus);
+        return new ResponseEntity<>(bus.getPlazasLibres(), HttpStatus.OK);
     }
 
     private String getJWTToken(String username, String rol)

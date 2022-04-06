@@ -22,7 +22,7 @@ public class BackempresaApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(BackempresaApplication.class, args);
 	}
-
+/*
 	@Bean
 	CommandLineRunner init(
 			DestinoService destinoService,
@@ -36,35 +36,47 @@ public class BackempresaApplication {
 			personaService.add(new Persona(null,"usuario2","123456"));
 			personaService.add(new Persona(null,"usuario3","123456"));
 
-			final int PLAZAS_LIBRES = 5; // Provisional.
 			// Viajes a las ciudades indicadas para todos los días del mes 04 de 2022 a las horas indicadas.
 			// En total se añadirán 4x4x30 = 480 registros a Autobus
 			String[] destinos = {"Valencia","Madrid","Barcelona","Bilbao"};
+			String[] idDestinos = {"VAL","MAD","BAR","BIL"};
 			Float[] salidas = { 8f, 12f, 16f, 20f };
 			String anyo = "2022";
 			String mes = "04";
 			SimpleDateFormat sdf = new SimpleDateFormat("ddMMyyyy");
 			DestinoInputDto dsInputDto = new DestinoInputDto();
-			for (String destino:destinos) {
-				dsInputDto.setNombre(destino);
+			for (int i=0; i<destinos.length; i++) {
+				dsInputDto.setId(idDestinos[i]);
+				dsInputDto.setNombre(destinos[i]);
 				Destino ds = destinoService.add(dsInputDto);
-				long idDestino = ds.getIdDestino();
-				for (int i=1; i<=30; i++) {
-					String dateInString = String.format("%02d",i)+mes+anyo;
+				for (int j=1; j<=30; j++) {
+					String dateInString = String.format("%02d",j)+mes+anyo;
 					Date fecha = sdf.parse(dateInString);
 					for (Float hora:salidas) {
 						AutobusInputDto busInputDto = new AutobusInputDto();
-						busInputDto.setIdDestino(idDestino);
+						busInputDto.setIdDestino(ds.getId());
 						busInputDto.setFecha(fecha);
 						busInputDto.setHoraSalida(hora);
-						// Falta: plazas libres deberá tomarse del back de la empresa.
-						busInputDto.setPlazasLibres(PLAZAS_LIBRES);
+						busInputDto.setPlazasLibres(autobusService.MAX_PLAZAS);
 						autobusService.add(busInputDto);
 					}
 				}
-
 			}
 		};
 	}
+*/
+	@Bean(name = "sdf1")
+	SimpleDateFormat sdf1() {
+		return new SimpleDateFormat("dd-MM-yyyy");
+	}
 
+	@Bean(name = "sdf2")
+	SimpleDateFormat sdf2() {
+		return new SimpleDateFormat("ddMMyyyy");
+	}
+
+	@Bean(name = "sdf3")
+	SimpleDateFormat sdf3() {
+		return new SimpleDateFormat("ddMMyy");
+	}
 }

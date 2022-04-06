@@ -3,12 +3,15 @@ package com.backempresa.autobus.application;
 import com.backempresa.autobus.domain.Autobus;
 import com.backempresa.autobus.infrastructure.AutobusInputDto;
 
+import java.util.Date;
 import java.util.List;
 
 public interface AutobusService {
+    int ID_LENGTH=11;
+    int MAX_PLAZAS=5;
     List<Autobus> findAll();
-    Autobus findById(long id);
+    Autobus findById(String id);
     Autobus add(AutobusInputDto inputDto);
-    Autobus put(long id, AutobusInputDto inputDto);
-    void del(long id);
+    void del(String id);
+    String getIdBus(String idDestino, Date fecha, Float hora);
 }

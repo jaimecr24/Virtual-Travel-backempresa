@@ -8,7 +8,7 @@ import java.util.Date;
 @Getter
 @Setter
 public class AutobusInputDto {
-    private long idDestino;
+    private String idDestino;
     private Date fecha;
     private Float horaSalida;
     private int plazasLibres = 40;

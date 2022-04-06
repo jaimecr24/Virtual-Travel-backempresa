@@ -7,6 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface DestinoRepo extends JpaRepository<Destino,Long> {
+public interface DestinoRepo extends JpaRepository<Destino,String> {
     List<Destino> findByNombreDestino(String nombreDestino);
 }

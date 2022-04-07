@@ -20,17 +20,24 @@ public class PostOffice {
 
     public void sendMessage(ReservaOutputDto outDto){
 
-        Email email = EmailBuilder.startingBlank()
-                .from("From", "backempresa@vtravel.com")
-                .to("To", outDto.getEmail())
-                .withSubject("RESERVA "+outDto.getCiudadDestino()+" "+outDto.getStatus())
-                .withPlainText("Reserva "+outDto.getStatus()+
-                        "\nDestino: "+outDto.getCiudadDestino()+
-                        "\nFecha: "+outDto.getFechaReserva()+
-                        "\nHora: "+outDto.getHoraReserva()+
-                        "\nIdentificador: "+outDto.getIdentificador()+
-                        "\n\nGracias por confiar en Virtual-Travel")
-                .buildEmail();
+    Email email =
+        EmailBuilder.startingBlank()
+            .from("From", "backempresa@vtravel.com")
+            .to("To", outDto.getEmail())
+            .withSubject("RESERVA " + outDto.getCiudadDestino() + " " + outDto.getStatus())
+            .withPlainText(
+                "Reserva "
+                    + outDto.getStatus()
+                    + "\nDestino: "
+                    + outDto.getCiudadDestino()
+                    + "\nFecha: "
+                    + outDto.getFechaReserva()
+                    + "\nHora: "
+                    + outDto.getHoraReserva()
+                    + ((outDto.getStatus().equals("RECHAZADA"))
+                        ? "\nSu reserva ha sido cancelada por falta de sitio.\nLamentamos los inconvenientes."
+                        : "\nIdentificador: "+outDto.getIdentificador()+"\n\nGracias por confiar en Virtual-Travel"))
+            .buildEmail();
 
         AsyncResponse response = mailer.sendMail(email,true); // True for async message
 

@@ -53,10 +53,11 @@ public class KafkaListenerOne {
             }
         } catch (NotPlaceException ex) {
             System.out.println("Backempresa ("+port+"): "+ex.getMessage());
-            kafkaMessageProducer.sendMessage("comandos", 0, "REJECT:"
+            // Enviamos mensaje para que backweb actualice las plazas libres del autobús a 0
+            kafkaMessageProducer.sendMessage("comandos", 0, "UPDATE:"
                     +outputDto.getIdentificador()+":00");
-            // Mensaje a backweb para actualizar plazas disponibles a 0 y marcar la reserva como rechazada.
-            // TODO: Este error es por fallo de sincronización. Debe pedir de nuevo las reservas del autobús y actualizarse.
+            outputDto.setStatus("RECHAZADA");
+            postOffice.sendMessage(outputDto);
         }
     }
 }

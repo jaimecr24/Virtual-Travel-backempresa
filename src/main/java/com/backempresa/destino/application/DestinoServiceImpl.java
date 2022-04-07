@@ -5,7 +5,6 @@ import com.backempresa.destino.infrastructure.DestinoInputDto;
 import com.backempresa.destino.infrastructure.DestinoRepo;
 import com.backempresa.shared.NotFoundException;
 import com.backempresa.shared.UnprocesableException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -14,8 +13,10 @@ import java.util.List;
 @Service
 public class DestinoServiceImpl implements DestinoService{
 
-    @Autowired
     DestinoRepo destinoRepo;
+    public DestinoServiceImpl(DestinoRepo destinoRepo) {  // Equivalente a "@Autowired DestinoRepo destinoRepo;"
+        this.destinoRepo = destinoRepo;
+    }
 
     @Override
     public List<Destino> findAll() {
@@ -24,7 +25,7 @@ public class DestinoServiceImpl implements DestinoService{
 
     @Override
     public Destino findById(String id) {
-        return destinoRepo.findById(id).orElseThrow(()->new NotFoundException("Destino +"+id+" no encontrado"));
+        return destinoRepo.findById(id).orElseThrow(()->new NotFoundException("Destino "+id+" no encontrado"));
     }
 
     @Override
@@ -68,7 +69,7 @@ public class DestinoServiceImpl implements DestinoService{
         destinoRepo.delete(ds);
     }
 
-    public Destino toDestino(DestinoInputDto inputDto) {
+    private Destino toDestino(DestinoInputDto inputDto) {
         Destino ds = new Destino();
         ds.setId(inputDto.getId());
         ds.setNombreDestino(inputDto.getNombre());

@@ -17,14 +17,19 @@ import java.util.List;
 @Service
 public class AutobusServiceImpl implements AutobusService{
 
-    @Autowired
     AutobusRepo autobusRepo;
-
-    @Autowired
     DestinoService destinoService;
-
-    @Autowired
     SimpleDateFormat sdf1, sdf2, sdf3;
+    public AutobusServiceImpl(
+            AutobusRepo autobusRepo,
+            DestinoService destinoService,
+            SimpleDateFormat sdf1, SimpleDateFormat sdf2, SimpleDateFormat sdf3) {
+        this.autobusRepo = autobusRepo;
+        this.destinoService = destinoService;
+        this.sdf1 = sdf1;
+        this.sdf2 = sdf2;
+        this.sdf3 = sdf3;
+    }
 
     @Override
     public List<Autobus> findAll() {

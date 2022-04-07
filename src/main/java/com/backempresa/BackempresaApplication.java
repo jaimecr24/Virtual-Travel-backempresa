@@ -1,20 +1,10 @@
 package com.backempresa;
 
-import com.backempresa.autobus.application.AutobusService;
-import com.backempresa.autobus.domain.Autobus;
-import com.backempresa.autobus.infrastructure.AutobusInputDto;
-import com.backempresa.destino.application.DestinoService;
-import com.backempresa.destino.domain.Destino;
-import com.backempresa.destino.infrastructure.DestinoInputDto;
-import com.backempresa.persona.application.PersonaService;
-import com.backempresa.persona.domain.Persona;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
 
 @SpringBootApplication
 public class BackempresaApplication {

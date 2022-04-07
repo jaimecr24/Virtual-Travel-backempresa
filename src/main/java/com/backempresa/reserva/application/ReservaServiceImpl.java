@@ -21,17 +21,20 @@ import java.util.stream.Collectors;
 @Service
 public class ReservaServiceImpl implements ReservaService {
 
-    @Autowired
     ReservaRepo reservaRepo;
-
-    @Autowired
     DestinoService destinoService;
-
-    @Autowired
     AutobusService autobusService;
-
-    @Autowired
     SimpleDateFormat sdf1, sdf2, sdf3;
+    public ReservaServiceImpl(
+            ReservaRepo reservaRepo,
+            DestinoService destinoService,
+            AutobusService autobusService,
+            SimpleDateFormat sdf1, SimpleDateFormat sdf2, SimpleDateFormat sdf3) {
+        this.reservaRepo = reservaRepo;
+        this.destinoService = destinoService;
+        this.autobusService = autobusService;
+        this.sdf1 = sdf1; this.sdf2 = sdf2; this.sdf3 = sdf3;
+    }
 
     @Override
     public List<Reserva> findAll() {
@@ -50,8 +53,11 @@ public class ReservaServiceImpl implements ReservaService {
 
     @Override
     public List<ReservaDisponibleOutputDto> findDisponible(String destino, String fechaInferior, String fechaSuperior, String horaInferior, String horaSuperior) {
+        // Obtiene todos los autobuses con plazas disponibles para el destino e intervalo especificado.
+        // fechaSuperior, horaInferior y horaSuperior pueden ser null.
+        // Formato de las fechas: ddMMyyyy || Formato de las horas: 00
         List<Destino> dstList = destinoService.findByDestino(destino);
-        if (dstList.size()!=1) throw new NotFoundException("Destino no encontrado o duplicado");
+        if (dstList.size()<1) return new ArrayList<>(); // No hay ningún elemento.
         Destino dst = dstList.get(0);
         List<Autobus> busList = dst.getAutobuses();
         try {
@@ -59,10 +65,10 @@ public class ReservaServiceImpl implements ReservaService {
             Date fSup = (fechaSuperior != null) ? sdf2.parse(fechaSuperior) : null;
             Float hInf = (horaInferior != null) ? Float.parseFloat(horaInferior) : 0F;
             Float hSup = (horaSuperior != null) ? Float.parseFloat(horaSuperior) : 24F;
-            return busList.stream().filter(e ->
-                            e.getFecha().compareTo(fInf) >= 0
-                                    && (fSup==null || e.getFecha().compareTo(fSup)<=0)
-                                    && e.getHoraSalida()>=hInf && e.getHoraSalida()<=hSup)
+            return busList.stream().filter(e -> e.getPlazasLibres()>0
+                            && e.getFecha().compareTo(fInf) >= 0
+                            && (fSup==null || e.getFecha().compareTo(fSup)<=0)
+                            && e.getHoraSalida()>=hInf && e.getHoraSalida()<=hSup)
                     .map(ReservaDisponibleOutputDto::new).collect(Collectors.toList());
         } catch(ParseException e) {
             throw new UnprocesableException("Error en el formato de las fechas: "+e.getMessage());
@@ -70,10 +76,12 @@ public class ReservaServiceImpl implements ReservaService {
     }
 
     @Override
-    public List<ReservaOutputDto> findReservas(String destino, String fechaInferior, String fechaSuperior, String horaInferior, String horaSuperior)
-    {
+    public List<ReservaOutputDto> findReservas(String destino, String fechaInferior, String fechaSuperior, String horaInferior, String horaSuperior) {
+        // Obtiene todas las reservas anotadas para un destino y un intervalo de fechas y horas (sin importar el status).
+        // fechaSuperior, horaInferior y horaSuperior pueden ser null.
+        // Formato de las fechas: ddMMyyyy || Formato de las horas: 00
         List<Destino> dstList = destinoService.findByDestino(destino);
-        if (dstList.size()==0) return new ArrayList<>();
+        if (dstList.size()<1) return new ArrayList<>(); // No hay ningún elemento
         Destino dst = dstList.get(0);
         List<Autobus> busList = dst.getAutobuses();
         try {
@@ -85,9 +93,9 @@ public class ReservaServiceImpl implements ReservaService {
                             e.getFecha().compareTo(fInf) >= 0
                                     && (fSup==null || e.getFecha().compareTo(fSup)<=0)
                                     && e.getHoraSalida()>=hInf && e.getHoraSalida()<=hSup).map(Autobus::getReservas)
-                    .reduce((l1,l2)-> { l1.addAll(l2); return l1; });
+                    .reduce((l1,l2)-> { l1.addAll(l2); return l1; }); // Obtenemos la lista de reservas para cada autobús y las reducimos a una sola lista.
             return reservas.map(reservaList -> reservaList.stream().map(this::toOutputDto).collect(Collectors.toList()))
-                    .orElseGet(ArrayList::new);
+                    .orElse(new ArrayList<>()); // Convertimos el Optional de List<Reserva> a un List<ReservaOutputDto>, si está vacío devolvemos una lista vacía.
         } catch(ParseException e) {
             throw new UnprocesableException("Error en el formato de las fechas: "+e.getMessage());
         }
@@ -109,7 +117,7 @@ public class ReservaServiceImpl implements ReservaService {
     @Override
     public ReservaOutputDto add(ReservaInputDto inputDto) throws NotFoundException, NotPlaceException {
         // Crea un objeto Reserva con los datos indicados en inputDto
-        // Si hay sitio libre la reserva queda CONFIRMADA y añadida a la base de datos, sino se lanza excepción
+        // Si hay sitio libre la reserva queda CONFIRMADA y añadida a la base de datos, si no se lanza excepción
         Reserva rsv = this.toReserva(inputDto);
         Autobus bus = rsv.getAutobus();
         int plazas = bus.getPlazasLibres();
@@ -213,7 +221,7 @@ public class ReservaServiceImpl implements ReservaService {
 
     public ReservaOutputDto toOutputDto(Reserva rsv) {
         ReservaOutputDto outDto = new ReservaOutputDto();
-        outDto.setIdReserva(rsv.getIdReserva());
+        if (rsv.getIdReserva()!=null) outDto.setIdReserva(rsv.getIdReserva());
         outDto.setIdentificador(rsv.getIdentificador());
         outDto.setCiudadDestino(rsv.getAutobus().getDestino().getNombreDestino());
         outDto.setNombre(rsv.getNombre());
@@ -222,7 +230,7 @@ public class ReservaServiceImpl implements ReservaService {
         outDto.setTelefono(rsv.getTelefono());
         outDto.setFechaReserva(sdf1.format(rsv.getAutobus().getFecha()));
         outDto.setHoraReserva(rsv.getAutobus().getHoraSalida());
-        switch (rsv.getStatus()) {
+        if (rsv.getStatus()!=null) switch (rsv.getStatus()) {
             case ACEPTADA: outDto.setStatus("ACEPTADA"); break;
             case RECHAZADA: outDto.setStatus("RECHAZADA"); break;
             case CONFIRMADA: outDto.setStatus("CONFIRMADA"); break;

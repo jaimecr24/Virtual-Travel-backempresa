@@ -2,6 +2,8 @@ package com.backempresa.reserva.infrastructure;
 
 import com.backempresa.autobus.application.AutobusService;
 import com.backempresa.autobus.domain.Autobus;
+import com.backempresa.destino.application.DestinoService;
+import com.backempresa.destino.domain.Destino;
 import com.backempresa.persona.application.PersonaService;
 import com.backempresa.persona.domain.Persona;
 import com.backempresa.reserva.application.ReservaService;
@@ -34,6 +36,9 @@ public class ReservaControlador {
 
     @Autowired
     ReservaService reservaService;
+
+    @Autowired
+    DestinoService destinoService;
 
     @Autowired
     PersonaService personaService;
@@ -75,48 +80,34 @@ public class ReservaControlador {
     }
 
     // Obtiene la lista de reservas realizadas por destino, intervalo de fechas y horas
-    //TODO: ¿Porqué correos si se devuelve una lista de ReservaOutputDto?
-    // Guardar lista de correos enviados? Pero es la misma que de reservas...
     @GetMapping("correos")
     public ResponseEntity<List<ReservaOutputDto>> getReservasByInterval(
-            @RequestHeader("authorize") String token,
             @RequestParam(name="ciudadDestino") String ciudadDestino,
             @RequestParam(name="fechaInferior") String fechaInferior,
             @RequestParam(name="fechaSuperior", required = false) String fechaSuperior,
             @RequestParam(name="horaInferior", required = false) String horaInferior,
             @RequestParam(name="horaSuperior", required = false) String horaSuperior)
     {
-        if (this.verifyToken(token)) {
-            return new ResponseEntity<>(reservaService.findReservas(ciudadDestino, fechaInferior, fechaSuperior, horaInferior, horaSuperior), HttpStatus.OK);
-        } else
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        return new ResponseEntity<>(reservaService.findReservas(ciudadDestino, fechaInferior, fechaSuperior, horaInferior, horaSuperior), HttpStatus.OK);
     }
 
     // Lista de reservas realizadas para un destino, fecha y hora
     @GetMapping("reservas")
     public ResponseEntity<List<ReservaOutputDto>> getReservas(
-            @RequestHeader("authorize") String token,
             @RequestParam(name="ciudadDestino") String ciudadDestino,
             @RequestParam(name="fecha") String fecha,
             @RequestParam(name="hora") String hora)
     {
-        if (this.verifyToken(token)) {
-            return new ResponseEntity<>(reservaService.findReservas(ciudadDestino, fecha, fecha, hora, hora), HttpStatus.OK);
-        } else
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        return new ResponseEntity<>(reservaService.findReservas(ciudadDestino, fecha, fecha, hora, hora), HttpStatus.OK);
     }
 
     @PutMapping("correos")
-    public ResponseEntity<ReservaOutputDto> forwardMail(
-            @RequestBody CorreoInputDto correoDto,
-            @RequestHeader("authorize") String token)
+    public ResponseEntity<ReservaOutputDto> forwardMail(@RequestBody CorreoInputDto correoDto)
     {
-       if (this.verifyToken(token)) { // Obtenemos los datos y reenviamos el correo.
-           ReservaOutputDto rsvDto = reservaService.findReserva(correoDto);
-           postOffice.sendMessage(rsvDto);
-           return new ResponseEntity<>(rsvDto,HttpStatus.OK);
-       } else
-           return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+       // Obtenemos los datos y reenviamos el correo.
+       ReservaOutputDto rsvDto = reservaService.findReserva(correoDto);
+       postOffice.sendMessage(rsvDto);
+       return new ResponseEntity<>(rsvDto,HttpStatus.OK);
     }
 
     // Endpoint para añadir directamente reservas a la bd de empresa.
@@ -136,9 +127,11 @@ public class ReservaControlador {
     public ResponseEntity<Integer> getPlazasLibres(
             @PathVariable String destino,
             @RequestParam(name="fecha") String fecha,
-            @RequestParam(name="hora") String hora) throws ParseException {
+            @RequestParam(name="hora") String hora) throws Exception {
         // Formato de fecha: ddMMyyyy
-        String idBus = autobusService.getIdBus(destino, sdf2.parse(fecha), Float.parseFloat(hora));
+        List<Destino> listDst = destinoService.findByDestino(destino);
+        if (listDst.isEmpty()) throw new NotFoundException("Destino no encontrado");
+        String idBus = autobusService.getIdBus(listDst.get(0).getId(), sdf2.parse(fecha), Float.parseFloat(hora));
         Autobus bus = autobusService.findById(idBus);
         return new ResponseEntity<>(bus.getPlazasLibres(), HttpStatus.OK);
     }

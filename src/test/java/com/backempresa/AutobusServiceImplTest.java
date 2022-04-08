@@ -1,110 +1,106 @@
 package com.backempresa;
 
 import com.backempresa.autobus.application.AutobusService;
-import com.backempresa.autobus.application.AutobusServiceImpl;
 import com.backempresa.autobus.domain.Autobus;
 import com.backempresa.autobus.infrastructure.AutobusInputDto;
-import com.backempresa.autobus.infrastructure.AutobusRepo;
 import com.backempresa.destino.application.DestinoService;
-import com.backempresa.destino.application.DestinoServiceImpl;
-import com.backempresa.destino.domain.Destino;
+import com.backempresa.destino.infrastructure.DestinoInputDto;
 import com.backempresa.shared.NotFoundException;
 import com.backempresa.shared.UnprocesableException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
-import java.util.Optional;
 
 import static com.backempresa.autobus.application.AutobusService.MAX_PLAZAS;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class AutobusServiceImplTest {
 
-    DestinoService destinoService = mock(DestinoServiceImpl.class);
-    AutobusRepo autobusRepo = mock(AutobusRepo.class);
-    SimpleDateFormat sdf1 = new SimpleDateFormat("dd-MM-yyyy");
-    SimpleDateFormat sdf2 = new SimpleDateFormat("ddMMyyyy");
-    SimpleDateFormat sdf3 = new SimpleDateFormat("ddMMyy");
+    @Autowired
+    AutobusService autobusService;
 
-    AutobusService autobusService = new AutobusServiceImpl(autobusRepo, destinoService, sdf1, sdf2, sdf3);
+    @Autowired
+    DestinoService destinoService;
 
-    Autobus bus = new Autobus();
-    AutobusInputDto inputDto = new AutobusInputDto();
-    String idDestino = "VAL";
-    String idAutobus = "VAL02042212";
-    Date fecha = new Date();
-    Float horaSalida = 12F;
-    int plazasLibres = 2;
+    @Autowired
+    SimpleDateFormat sdf3;
+
+    private final String idDestino1 = "VAL";
+    private final String fechaStr = "010522";
+    private final Float horaSalida = 12F;
+
+    @BeforeAll
+    void starting() throws ParseException {
+
+        assertTrue(destinoService.findAll().isEmpty());
+        assertTrue(autobusService.findAll().isEmpty());
+        // Añadimos un destino
+        String nombreDestino1 = "Valencia";
+        DestinoInputDto dstInputDto1 = new DestinoInputDto(idDestino1, nombreDestino1);
+        destinoService.add(dstInputDto1);
+        // Comprobamos que no hay ningún autobus en la base de datos
+        assertTrue(autobusService.findAll().isEmpty());
+        // Añadimos dos autobuses en horas consecutivas para las pruebas siguientes
+        Date fecha = sdf3.parse(fechaStr);
+        AutobusInputDto inputDto1 = new AutobusInputDto(idDestino1, fecha, horaSalida,2);
+        AutobusInputDto inputDto2 = new AutobusInputDto(idDestino1, fecha, horaSalida+1,2);
+        autobusService.add(inputDto1);
+        autobusService.add(inputDto2);
+    }
 
     @Test
     void testFindAll() {
-
-        // Testing con 1 elemento
-        List<Autobus> myList = new ArrayList<>();
-        myList.add(bus);
-        when(autobusRepo.findAll()).thenReturn(myList);
-        List<Autobus> res = autobusService.findAll();
-        assertEquals(1, res.size());
-
-        // Testing con 0 elementos
-        myList = new ArrayList<>();
-        when(autobusRepo.findAll()).thenReturn(myList);
-        res = autobusService.findAll();
-        assertEquals(new ArrayList<>(), res);
+        assertEquals(2,autobusService.findAll().size());
     }
 
     @Test
-    void testFindById() {
-        bus.setId(idAutobus);
-        Optional<Autobus> optBus = Optional.of(bus);
-
+    void testFindById() throws ParseException {
+        Date fecha = sdf3.parse(fechaStr);
+        String idBus = autobusService.getIdBus(idDestino1, fecha, horaSalida);
         // Búsqueda de un elemento existente
-        when(autobusRepo.findById(idAutobus)).thenReturn(optBus);
-        Autobus res = autobusService.findById(idAutobus);
-        assertEquals(bus, res);
-
+        Autobus res = autobusService.findById(idBus);
+        assertEquals(idBus, res.getId());
         // Búsqueda de un elemento inexistente
-        when(autobusRepo.findById(idAutobus)).thenReturn(Optional.empty());
-        Throwable exception = assertThrows(NotFoundException.class, () -> autobusService.findById(idAutobus));
-        assertEquals("El autobús "+idAutobus+" no existe", exception.getMessage());
+        assertThrows(NotFoundException.class, () -> autobusService.findById("AAA"));
     }
 
     @Test
-    void testAdd() {
-        inputDto.setIdDestino(idDestino);
-        inputDto.setFecha(fecha);
-        inputDto.setHoraSalida(horaSalida);
-        inputDto.setPlazasLibres(plazasLibres);
-        String id = autobusService.getIdBus(idDestino,fecha,horaSalida);
-        Destino ds = new Destino();
-        ds.setId(idDestino);
-
-        when(destinoService.findById(idDestino)).thenReturn(ds);
-        when(autobusRepo.findById(id)).thenReturn(Optional.empty());
-
-        // Añadir autobús ok
-        Autobus res = autobusService.add(inputDto);
-        assertEquals(id, res.getId());
-        assertEquals(idDestino, res.getDestino().getId());
-        assertEquals(fecha, res.getFecha());
-        assertEquals(horaSalida, res.getHoraSalida());
-        assertEquals(MAX_PLAZAS, res.getMaxPlazas());
-        assertEquals(plazasLibres, res.getPlazasLibres());
-
+    void testAddDel() throws ParseException {
+        Date fecha = sdf3.parse(fechaStr);
+        // Añadimos un autobús una hora más tarde.
+        String idBus = autobusService.getIdBus(idDestino1, fecha, horaSalida+2); // Lo necesitamos para eliminarlo después.
+        Autobus bus = autobusService.add(new AutobusInputDto(idDestino1, fecha, horaSalida+2, 2));
+        // Después de añadir uno, comprobamos el número total de autobuses.
+        assertEquals(3,autobusService.findAll().size());
+        assertEquals(MAX_PLAZAS, bus.getMaxPlazas());
         // El autobús ya existe
-        when(autobusRepo.findById(id)).thenReturn(Optional.of(bus));
-        Throwable exception = assertThrows(UnprocesableException.class, () -> autobusService.add(inputDto));
-        assertTrue(exception.getMessage().contains("Ya existe un autobús"));
+        assertThrows(UnprocesableException.class, () -> autobusService.add(new AutobusInputDto(idDestino1, fecha, horaSalida, 2)));
+        // Eliminamos el que hemos añadido y comprobamos el número de autobuses
+        autobusService.del(idBus);
+        assertEquals(2,autobusService.findAll().size());
+        Throwable exception = assertThrows(NotFoundException.class, () -> autobusService.del(idBus));
+    }
+
+    @AfterAll
+    void cleaning() throws ParseException {
+        Date fecha = sdf3.parse(fechaStr);
+        String idBus1 = autobusService.getIdBus(idDestino1, fecha, horaSalida);
+        String idBus2 = autobusService.getIdBus(idDestino1, fecha, horaSalida+1);
+        autobusService.del(idBus1);
+        autobusService.del(idBus2);
+        destinoService.del(idDestino1);
+        assertTrue(autobusService.findAll().isEmpty());
+        assertTrue(destinoService.findAll().isEmpty());
     }
 }

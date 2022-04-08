@@ -1,5 +1,6 @@
 package com.backempresa.reserva.infrastructure;
 
+import com.backempresa.shared.UnprocesableException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Serializer;
 
@@ -16,7 +17,7 @@ public class ReservaOutputDtoSerializer implements Serializer<ReservaOutputDto> 
             serializedBytes = objectMapper.writeValueAsString(data).getBytes();
         }
         catch (IOException e) {
-            e.printStackTrace();
+            throw new UnprocesableException("Error al serializar ReservaOutputDto: "+e.getMessage());
         }
         return serializedBytes;
     }

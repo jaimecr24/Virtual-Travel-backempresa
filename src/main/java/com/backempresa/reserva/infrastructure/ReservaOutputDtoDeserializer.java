@@ -1,5 +1,6 @@
 package com.backempresa.reserva.infrastructure;
 
+import com.backempresa.shared.UnprocesableException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Deserializer;
 
@@ -12,7 +13,7 @@ public class ReservaOutputDtoDeserializer implements Deserializer<ReservaOutputD
         try {
             reservaOutputDto = mapper.readValue(bytes, ReservaOutputDto.class);
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new UnprocesableException("Error al deserializar ReservaOutputDto: "+e.getMessage());
         }
         return reservaOutputDto;
     }

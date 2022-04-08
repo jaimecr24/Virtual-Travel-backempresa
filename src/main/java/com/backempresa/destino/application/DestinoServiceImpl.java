@@ -5,6 +5,7 @@ import com.backempresa.destino.infrastructure.DestinoInputDto;
 import com.backempresa.destino.infrastructure.DestinoRepo;
 import com.backempresa.shared.NotFoundException;
 import com.backempresa.shared.UnprocesableException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -13,10 +14,8 @@ import java.util.List;
 @Service
 public class DestinoServiceImpl implements DestinoService{
 
+    @Autowired
     DestinoRepo destinoRepo;
-    public DestinoServiceImpl(DestinoRepo destinoRepo) {  // Equivalente a "@Autowired DestinoRepo destinoRepo;"
-        this.destinoRepo = destinoRepo;
-    }
 
     @Override
     public List<Destino> findAll() {
@@ -48,16 +47,8 @@ public class DestinoServiceImpl implements DestinoService{
 
     @Override
     public Destino patch(String id, DestinoInputDto inputDto) {
-        // Permite modificar el nombre de un destino.
-        // Solo se modifican los campos que no sean nulo.
+        // Permite modificar el nombre de un destino. Si el nombre es null, no hace nada
         Destino ds = this.findById(id);
-        if (inputDto.getId()!=null) {
-            if (inputDto.getId().length()!=ID_LENGTH)
-                throw new UnprocesableException("El id debe tener "+ID_LENGTH+" caracteres");
-            if (!inputDto.getId().equals(ds.getId()) && destinoRepo.findById(inputDto.getId()).isPresent())
-                throw new UnprocesableException("No puede modificar el id a un valor ya existente");
-            ds.setId(inputDto.getId());
-        }
         if (inputDto.getNombre()!=null) ds.setNombreDestino(inputDto.getNombre());
         destinoRepo.save(ds);
         return ds;

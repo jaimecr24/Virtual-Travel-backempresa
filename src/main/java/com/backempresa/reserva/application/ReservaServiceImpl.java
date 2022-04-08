@@ -21,20 +21,17 @@ import java.util.stream.Collectors;
 @Service
 public class ReservaServiceImpl implements ReservaService {
 
+    @Autowired
     ReservaRepo reservaRepo;
+
+    @Autowired
     DestinoService destinoService;
+
+    @Autowired
     AutobusService autobusService;
-    SimpleDateFormat sdf1, sdf2, sdf3;
-    public ReservaServiceImpl(
-            ReservaRepo reservaRepo,
-            DestinoService destinoService,
-            AutobusService autobusService,
-            SimpleDateFormat sdf1, SimpleDateFormat sdf2, SimpleDateFormat sdf3) {
-        this.reservaRepo = reservaRepo;
-        this.destinoService = destinoService;
-        this.autobusService = autobusService;
-        this.sdf1 = sdf1; this.sdf2 = sdf2; this.sdf3 = sdf3;
-    }
+
+    @Autowired
+    SimpleDateFormat sdf1, sdf2;
 
     @Override
     public List<Reserva> findAll() {
@@ -57,7 +54,7 @@ public class ReservaServiceImpl implements ReservaService {
         // fechaSuperior, horaInferior y horaSuperior pueden ser null.
         // Formato de las fechas: ddMMyyyy || Formato de las horas: 00
         List<Destino> dstList = destinoService.findByDestino(destino);
-        if (dstList.size()<1) return new ArrayList<>(); // No hay ningún elemento.
+        if (dstList.isEmpty()) return new ArrayList<>(); // No hay ningún elemento.
         Destino dst = dstList.get(0);
         List<Autobus> busList = dst.getAutobuses();
         try {
@@ -81,7 +78,7 @@ public class ReservaServiceImpl implements ReservaService {
         // fechaSuperior, horaInferior y horaSuperior pueden ser null.
         // Formato de las fechas: ddMMyyyy || Formato de las horas: 00
         List<Destino> dstList = destinoService.findByDestino(destino);
-        if (dstList.size()<1) return new ArrayList<>(); // No hay ningún elemento
+        if (dstList.isEmpty()) return new ArrayList<>(); // No hay ningún elemento
         Destino dst = dstList.get(0);
         List<Autobus> busList = dst.getAutobuses();
         try {
@@ -104,7 +101,7 @@ public class ReservaServiceImpl implements ReservaService {
     @Override
     public ReservaOutputDto findReserva(CorreoInputDto correoDto) {
         List<Destino> dstList = destinoService.findByDestino(correoDto.getCiudadDestino());
-        if (dstList.size()==0) throw new NotFoundException("Reserva no encontrada");
+        if (dstList.isEmpty()) throw new NotFoundException("Reserva no encontrada");
         Destino dst = dstList.get(0);
         String idBus = autobusService.getIdBus(dst.getId(),correoDto.getFechaReserva(),correoDto.getHoraReserva());
         Autobus bus = autobusService.findById(idBus);
@@ -115,6 +112,7 @@ public class ReservaServiceImpl implements ReservaService {
     }
 
     @Override
+    @Transactional
     public ReservaOutputDto add(ReservaInputDto inputDto) throws NotFoundException, NotPlaceException {
         // Crea un objeto Reserva con los datos indicados en inputDto
         // Si hay sitio libre la reserva queda CONFIRMADA y añadida a la base de datos, si no se lanza excepción
@@ -151,20 +149,14 @@ public class ReservaServiceImpl implements ReservaService {
         else return null; // Si ya existe, no hacemos nada y devolvemos null para indicarlo.
     }
 
-    @Override
     @Transactional
-    public long getPlazasLibres(String destino, Date fecha, float hora) {
-        List<Destino> dstList = destinoService.findByDestino(destino);
-        if (dstList.size()==0) throw new NotFoundException("Destino no encontrado");
-        Destino dst = dstList.get(0);
-        String idBus = autobusService.getIdBus(dst.getId(),fecha,hora);
-        Autobus bus = autobusService.findById(idBus);
-        return bus.getPlazasLibres();
-    }
-
     @Override
-    public void del(long id) {
-        // TODO: Poner estado de la reserva en CANCELADA ??
+    public void del(long idReserva) {
+        Reserva rsv = this.findById(idReserva);
+        Autobus bus = rsv.getAutobus();
+        int plazas = bus.getPlazasLibres();
+        bus.setPlazasLibres(plazas+1);
+        reservaRepo.delete(rsv);
     }
 
     private String getIdentificadorReserva(Autobus bus){
@@ -173,16 +165,9 @@ public class ReservaServiceImpl implements ReservaService {
         return bus.getId() + String.format("%02d",bus.getMaxPlazas()-bus.getPlazasLibres()+1);
     }
 
-    private long numReservasAceptadas(Autobus bus) {
-        return bus.getReservas().stream().filter(e ->
-                e.getStatus() == Reserva.STATUS.ACEPTADA || e.getStatus() == Reserva.STATUS.CONFIRMADA).count();
-    }
-
-    public Reserva toReserva(ReservaInputDto inputDto) throws NotFoundException {
+    private Reserva toReserva(ReservaInputDto inputDto) throws NotFoundException {
         // Creamos el objeto
         Reserva rsv = new Reserva();
-        // Buscamos el objeto Destino
-        Destino dst = destinoService.findById(inputDto.getIdDestino());
         // Recuperamos el autobús con el día y la hora indicadas
         String idBus = autobusService.getIdBus(inputDto.getIdDestino(),inputDto.getFechaReserva(),inputDto.getHoraSalida());
         Autobus bus = autobusService.findById(idBus);
@@ -196,7 +181,7 @@ public class ReservaServiceImpl implements ReservaService {
         return rsv;
     }
 
-    public Reserva toReserva(ReservaOutputDto outputDto) throws NotFoundException {
+    private Reserva toReserva(ReservaOutputDto outputDto) throws NotFoundException {
         // Crea una reserva con los datos de outputDto
         String idBus = this.getIdBus(outputDto.getIdentificador());
         Autobus bus = autobusService.findById(idBus);
@@ -207,10 +192,11 @@ public class ReservaServiceImpl implements ReservaService {
         rsv.setTelefono(outputDto.getTelefono());
         rsv.setAutobus(bus);
         rsv.setIdentificador(outputDto.getIdentificador());
-        switch (outputDto.getStatus()) {
+        if (outputDto.getStatus()!=null) switch (outputDto.getStatus()) {
             case "ACEPTADA": rsv.setStatus(Reserva.STATUS.ACEPTADA); break;
             case "RECHAZADA": rsv.setStatus(Reserva.STATUS.RECHAZADA); break;
             case "CONFIRMADA": rsv.setStatus(Reserva.STATUS.CONFIRMADA); break;
+            default: rsv.setStatus(null);
         }
         return rsv;
     }
@@ -219,11 +205,13 @@ public class ReservaServiceImpl implements ReservaService {
         return identificadorReserva.substring(0, autobusService.ID_LENGTH);
     }
 
-    public ReservaOutputDto toOutputDto(Reserva rsv) {
+    private ReservaOutputDto toOutputDto(Reserva rsv) {
         ReservaOutputDto outDto = new ReservaOutputDto();
         if (rsv.getIdReserva()!=null) outDto.setIdReserva(rsv.getIdReserva());
         outDto.setIdentificador(rsv.getIdentificador());
-        outDto.setCiudadDestino(rsv.getAutobus().getDestino().getNombreDestino());
+        String idDestino = rsv.getIdentificador().substring(0,3);
+        Destino dst = destinoService.findById(idDestino);
+        outDto.setCiudadDestino(dst.getNombreDestino());
         outDto.setNombre(rsv.getNombre());
         outDto.setApellido(rsv.getApellido());
         outDto.setEmail(rsv.getEmail());

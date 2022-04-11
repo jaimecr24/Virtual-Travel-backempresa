@@ -9,6 +9,7 @@ import com.backempresa.reserva.domain.Reserva;
 import com.backempresa.reserva.infrastructure.*;
 import com.backempresa.shared.NotFoundException;
 import com.backempresa.shared.NotPlaceException;
+import com.backempresa.shared.UnprocesableException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -141,6 +142,9 @@ public class ReservaServiceImplTest {
         listDisp = reservaService.findDisponible(nombreDestino1, fechaStr, fechaStr, horaInf, horaSup);
         assertEquals(2,listDisp.size());
         assertEquals(sdf1.format(fecha), listDisp.get(0).getFechaReserva());  // Comprobamos que la fecha del resultado es la bus2
+
+        // Fecha con formato incorrecto
+        assertThrows(UnprocesableException.class, () -> reservaService.findDisponible(nombreDestino1, "aa122022", null, null, null));
     }
 
     @Test
@@ -148,6 +152,9 @@ public class ReservaServiceImplTest {
     void testFindReservas() throws ParseException {
         List<ReservaOutputDto> res = reservaService.findReservas(nombreDestino1, fechaInf, fechaSup, horaInf, horaSup);
         assertEquals(2, res.size());
+        assertTrue(reservaService.findReservas("Guadalajara","12122022",null,null,null).isEmpty());
+        // Fecha con formato incorrecto
+        assertThrows(UnprocesableException.class, () -> reservaService.findReservas(nombreDestino1, "aa122022", null, null, null));
     }
 
     @Test
@@ -157,6 +164,8 @@ public class ReservaServiceImplTest {
         CorreoInputDto correoDto = new CorreoInputDto(nombreDestino1,email1,fecha,horaSalida);
         ReservaOutputDto res = reservaService.findReserva(correoDto);
         assertEquals(email1,res.getEmail());
+        correoDto.setCiudadDestino("Guadalajara");
+        assertThrows(NotFoundException.class, ()->reservaService.findReserva(correoDto));
     }
 
     @Test

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Serializer;
 
 import java.io.IOException;
-import java.util.Map;
 
 public class ReservaOutputDtoSerializer implements Serializer<ReservaOutputDto> {
 
@@ -21,15 +20,4 @@ public class ReservaOutputDtoSerializer implements Serializer<ReservaOutputDto> 
         }
         return serializedBytes;
     }
-
-    @Override
-    public void configure(Map<String, ?> configs, boolean isKey) {
-
-    }
-
-    @Override
-    public void close() {
-
-    }
-
 }

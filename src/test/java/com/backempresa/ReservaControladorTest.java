@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -75,7 +76,7 @@ public class ReservaControladorTest {
         idRsv = reservaService.add(new ReservaInputDto(idDestino,"nombre1","apellido1","111111",email,fecha,12F)).getIdReserva();
         MvcResult res = mockMvc.perform(post("/api/v0/token/")
                         .header("user",usuario1)
-                        .header("password","123456"))
+                        .header("password","123456").with(csrf()))
                 .andExpect(status().isOk()).andReturn();
         token = res.getResponse().getContentAsString();
     }
@@ -85,20 +86,24 @@ public class ReservaControladorTest {
     void testLogin() throws Exception {
         MvcResult res = mockMvc.perform(post("/api/v0/token/")
                 .header("user",usuario1)
-                .header("password","123456"))
+                .header("password","123456").with(csrf()))
                 .andExpect(status().isOk()).andReturn();
         String mytoken = res.getResponse().getContentAsString();
         assertTrue(mytoken.contains("Bearer"));
+        res = mockMvc.perform(post("/api/v0/token/")
+                        .header("user",usuario1)
+                        .header("password","1000").with(csrf()))
+                .andExpect(status().isUnprocessableEntity()).andReturn();
     }
 
     @Test
     @DisplayName("Testing GET token")
     void testCheckToken() throws Exception {
         MvcResult res = mockMvc.perform(get("/api/v0/token/"+token)
-                .contentType(MediaType.APPLICATION_JSON)).andExpect(status().isOk()).andReturn();
+                .contentType(MediaType.APPLICATION_JSON).with(csrf())).andExpect(status().isOk()).andReturn();
         assertEquals(res.getResponse().getStatus(), HttpStatus.OK.value());
         res = mockMvc.perform(get("/api/v0/token/"+"nada")
-                .contentType(MediaType.APPLICATION_JSON)).andExpect(status().isForbidden()).andReturn();
+                .contentType(MediaType.APPLICATION_JSON).with(csrf())).andExpect(status().isForbidden()).andReturn();
         assertEquals(res.getResponse().getStatus(), HttpStatus.FORBIDDEN.value());
     }
 
@@ -107,7 +112,7 @@ public class ReservaControladorTest {
     void testGetUsuarios() throws Exception {
         MvcResult res = mockMvc.perform(get("/api/v0/usuarios/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization",token))
+                .header("Authorization",token).with(csrf()))
                 .andExpect(status().isOk()).andReturn();
         String contenido = res.getResponse().getContentAsString();
         List<Persona> personas= new ObjectMapper().readValue(contenido, new TypeReference<>() {	}); // Use TypeReference to map the List.
@@ -122,7 +127,7 @@ public class ReservaControladorTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("Authorization",token)
                         .param("ciudadDestino",nombreDestino)
-                        .param("fechaInferior",fechaStr))
+                        .param("fechaInferior",fechaStr).with(csrf()))
                 .andExpect(status().isOk()).andReturn();
         String contenido = res.getResponse().getContentAsString();
         List<ReservaOutputDto> listDto = new ObjectMapper().readValue(contenido, new TypeReference<>() {	}); // Use TypeReference to map the List.
@@ -138,7 +143,7 @@ public class ReservaControladorTest {
                         .header("Authorization",token)
                         .param("ciudadDestino",nombreDestino)
                         .param("fecha",fechaStr)
-                        .param("hora","12"))
+                        .param("hora","12").with(csrf()))
                 .andExpect(status().isOk()).andReturn();
         String contenido = res.getResponse().getContentAsString();
         List<ReservaOutputDto> listDto = new ObjectMapper().readValue(contenido, new TypeReference<>() {	}); // Use TypeReference to map the List.
@@ -155,7 +160,7 @@ public class ReservaControladorTest {
         MvcResult res = mockMvc.perform(put("/api/v0/correos/")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(gson.toJson(inputDto))
-                        .header("Authorization",token))
+                        .header("Authorization",token).with(csrf()))
                 .andExpect(status().isOk()).andReturn();
         String contenido = res.getResponse().getContentAsString();
         ReservaOutputDto outDto = new ObjectMapper().readValue(contenido, new TypeReference<>() {	}); // Use TypeReference to map the List.
@@ -171,7 +176,7 @@ public class ReservaControladorTest {
         MvcResult res = mockMvc.perform(post("/api/v0/reserva/")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(gson.toJson(inputDto))
-                        .header("Authorization",token))
+                        .header("Authorization",token).with(csrf()))
                 .andExpect(status().isOk()).andReturn();
         String contenido = res.getResponse().getContentAsString();
         ReservaOutputDto outDto = new ObjectMapper().readValue(contenido, new TypeReference<>() {	}); // Use TypeReference to map the List.
@@ -187,11 +192,17 @@ public class ReservaControladorTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("Authorization",token)
                         .param("fecha",fechaStr)
-                        .param("hora","12"))
+                        .param("hora","12").with(csrf()))
                 .andExpect(status().isOk()).andReturn();
         String contenido = res.getResponse().getContentAsString();
         Integer plazas = new ObjectMapper().readValue(contenido, new TypeReference<>() {	}); // Use TypeReference to map the List.
         Assertions.assertEquals(1, plazas);
+        res = mockMvc.perform(get("/api/v0/plazas/"+"Guadalajara")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization",token)
+                        .param("fecha",fechaStr)
+                        .param("hora","12").with(csrf()))
+                .andExpect(status().isNotFound()).andReturn();
     }
 
     @AfterAll

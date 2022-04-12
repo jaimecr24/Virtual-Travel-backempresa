@@ -29,9 +29,7 @@ public class KafkaListenerOne {
     @Value(value="${server.port}")
     String port;
 
-    @KafkaListener(topics = "reservas", groupId = "backempresa", topicPartitions = {
-            @TopicPartition(topic = "reservas", partitionOffsets = { @PartitionOffset(partition = "0", initialOffset = "0")} )
-    }) // Partición 0: mensajes a backempresa. Partición 1: mensajes a backweb.
+    @KafkaListener(topics = {"reservas"}, topicPartitions = {@TopicPartition(topic = "reservas", partitions = {"0"})})
     public void listenReservasWeb(ReservaOutputDto outputDto) {
         System.out.println("Backempresa ("+port+"): recibido mensaje en partición 0: " + outputDto.toString());
         ReservaOutputDto tempDto;

@@ -59,10 +59,10 @@ public class ReservaControladorTest {
     private Integer idPersona1;
     private final String usuario1="usuario1";
     private String token;
-    private String idDestino="VAL";
+    private final String idDestino="VAL";
     private final String nombreDestino="Valencia";
     private final String fechaStr="01052022";
-    private String email="email@email.com";
+    private final String email="email@email.com";
     private String idBus;
     private Long idRsv;
 
@@ -72,7 +72,8 @@ public class ReservaControladorTest {
         assertTrue(personaService.findAll().isEmpty());
         idPersona1 = personaService.add(new Persona(null,usuario1,"123456")).getId_persona();
         destinoService.add(new DestinoInputDto(idDestino,nombreDestino));
-        idBus = autobusService.add(new AutobusInputDto(idDestino, fecha, 12F, 2)).getId();
+        int maxPlazas = 5;
+        idBus = autobusService.add(new AutobusInputDto(idDestino, fecha, 12F, 2, maxPlazas)).getId();
         idRsv = reservaService.add(new ReservaInputDto(idDestino,"nombre1","apellido1","111111",email,fecha,12F)).getIdReserva();
         MvcResult res = mockMvc.perform(post("/api/v0/token/")
                         .header("user",usuario1)
@@ -90,7 +91,7 @@ public class ReservaControladorTest {
                 .andExpect(status().isOk()).andReturn();
         String mytoken = res.getResponse().getContentAsString();
         assertTrue(mytoken.contains("Bearer"));
-        res = mockMvc.perform(post("/api/v0/token/")
+        mockMvc.perform(post("/api/v0/token/")
                         .header("user",usuario1)
                         .header("password","1000").with(csrf()))
                 .andExpect(status().isUnprocessableEntity()).andReturn();
@@ -197,7 +198,7 @@ public class ReservaControladorTest {
         String contenido = res.getResponse().getContentAsString();
         Integer plazas = new ObjectMapper().readValue(contenido, new TypeReference<>() {	}); // Use TypeReference to map the List.
         Assertions.assertEquals(1, plazas);
-        res = mockMvc.perform(get("/api/v0/plazas/"+"Guadalajara")
+        mockMvc.perform(get("/api/v0/plazas/"+"Guadalajara")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("Authorization",token)
                         .param("fecha",fechaStr)

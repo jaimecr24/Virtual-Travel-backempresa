@@ -8,7 +8,6 @@ import java.util.List;
 
 public interface AutobusService {
     int ID_LENGTH=11;
-    int MAX_PLAZAS=5;
     List<Autobus> findAll();
     Autobus findById(String id);
     Autobus add(AutobusInputDto inputDto);

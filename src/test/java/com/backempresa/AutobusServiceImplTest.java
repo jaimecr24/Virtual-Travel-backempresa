@@ -19,7 +19,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import static com.backempresa.autobus.application.AutobusService.MAX_PLAZAS;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -39,6 +38,7 @@ public class AutobusServiceImplTest {
     private final String idDestino1 = "VAL";
     private final String fechaStr = "010522";
     private final Float horaSalida = 12F;
+    private final int maxPlazas = 5;
 
     @BeforeAll
     void starting() throws ParseException {
@@ -53,8 +53,8 @@ public class AutobusServiceImplTest {
         assertTrue(autobusService.findAll().isEmpty());
         // Añadimos dos autobuses en horas consecutivas para las pruebas siguientes
         Date fecha = sdf3.parse(fechaStr);
-        AutobusInputDto inputDto1 = new AutobusInputDto(idDestino1, fecha, horaSalida,2);
-        AutobusInputDto inputDto2 = new AutobusInputDto(idDestino1, fecha, horaSalida+1,2);
+        AutobusInputDto inputDto1 = new AutobusInputDto(idDestino1, fecha, horaSalida,2, maxPlazas);
+        AutobusInputDto inputDto2 = new AutobusInputDto(idDestino1, fecha, horaSalida+1,2, maxPlazas);
         autobusService.add(inputDto1);
         autobusService.add(inputDto2);
     }
@@ -80,12 +80,12 @@ public class AutobusServiceImplTest {
         Date fecha = sdf3.parse(fechaStr);
         // Añadimos un autobús una hora más tarde.
         String idBus = autobusService.getIdBus(idDestino1, fecha, horaSalida+2); // Lo necesitamos para eliminarlo después.
-        Autobus bus = autobusService.add(new AutobusInputDto(idDestino1, fecha, horaSalida+2, 2));
+        Autobus bus = autobusService.add(new AutobusInputDto(idDestino1, fecha, horaSalida+2, 2, maxPlazas));
         // Después de añadir uno, comprobamos el número total de autobuses.
         assertEquals(3,autobusService.findAll().size());
-        assertEquals(MAX_PLAZAS, bus.getMaxPlazas());
+        assertEquals(maxPlazas, bus.getMaxPlazas());
         // El autobús ya existe
-        assertThrows(UnprocesableException.class, () -> autobusService.add(new AutobusInputDto(idDestino1, fecha, horaSalida, 2)));
+        assertThrows(UnprocesableException.class, () -> autobusService.add(new AutobusInputDto(idDestino1, fecha, horaSalida, 2, maxPlazas)));
         // Eliminamos el que hemos añadido y comprobamos el número de autobuses
         autobusService.del(idBus);
         assertEquals(2,autobusService.findAll().size());
